@@ -10,12 +10,6 @@ import xml.dom.minidom
 import sqlite3 as sqlite
 from xml.dom.minidom import Node
 
-class dotdict(dict):
-    def __getattr__(self, attr):
-        return self.get(attr, None)
-    __setattr__= dict.__setitem__
-    __delattr__= dict.__delitem__
-
 class TickAPI:
 
     def __init__(_self, company, email, password):
@@ -130,11 +124,18 @@ class ticktimer:
         _self.statusIcon.set_visible(True);
         _self.statusIcon.connect("activate", _self.activate)
 
-    def activate(_self, widget, data = None):
+    def update(_self):
         _self.config = ConfigParser.RawConfigParser()
         _self.config.read("ticktimer.cfg")
         _self.api = TickAPI(_self.config.get('API', 'company'), _self.config.get('API', 'email'), _self.config.get('API', 'password'))
         _self.api.load()
+
+    def activate(_self, widget, data = None):
+        if not hasattr(_self, 'window'):
+            _self.window = gtk.Window(gtk.WINDOW_TOPLEVEL);
+            _self.update()
+
+        _self.window.show()
         cl = _self.selectClient()
         pr = _self.selectProject(cl)
         tk = _self.selectTask(pr)
