@@ -1,5 +1,6 @@
 #!/usr/bin/python
 
+import gtk
 import pycurl
 import datetime
 import pygtk
@@ -8,6 +9,12 @@ import StringIO
 import xml.dom.minidom
 import sqlite3 as sqlite
 from xml.dom.minidom import Node
+
+class dotdict(dict):
+    def __getattr__(self, attr):
+        return self.get(attr, None)
+    __setattr__= dict.__setitem__
+    __delattr__= dict.__delitem__
 
 class TickAPI:
 
@@ -118,15 +125,24 @@ class ticktimer:
 
 
     def __init__(_self):
-        global config, api
-        config = ConfigParser.RawConfigParser()
-        config.read("ticktimer.cfg")
-        api = TickAPI(config.get('API', 'company'), config.get('API', 'email'), config.get('API', 'password'))
-        api.load()
+        _self.statusIcon = gtk.StatusIcon();
+        _self.statusIcon.set_from_stock(gtk.STOCK_ABOUT);
+        _self.statusIcon.set_visible(True);
+        _self.statusIcon.connect("activate", _self.activate)
+
+    def activate(_self, widget, data = None):
+        _self.config = ConfigParser.RawConfigParser()
+        _self.config.read("ticktimer.cfg")
+        _self.api = TickAPI(_self.config.get('API', 'company'), _self.config.get('API', 'email'), _self.config.get('API', 'password'))
+        _self.api.load()
+        cl = _self.selectClient()
+        pr = _self.selectProject(cl)
+        tk = _self.selectTask(pr)
+        tm = _self.getTime()
+        _self.submitEntry(cl, pr, tk, tm, raw_input('Notes: '))
 
     def selectClient(_self):
-        global api
-        clients = api.getClients()
+        clients = _self.api.getClients()
         inc = 0
         clt = [];
         print "CLIENTS:"
@@ -138,8 +154,7 @@ class ticktimer:
         return clt[int(client_id)]
 
     def selectProject(_self, clientID):
-        global api
-        projects = api.getProjectsByClientID(clientID)
+        projects = _self.api.getProjectsByClientID(clientID)
         inc = 0
         prj = [];
         print "PROJECTS:"
@@ -151,8 +166,7 @@ class ticktimer:
         return prj[int(project_id)]
 
     def selectTask(_self, projectID):
-        global api
-        tasks = api.getTasksByProjectID(projectID)
+        tasks = _self.api.getTasksByProjectID(projectID)
         inc = 0
         tsk = [];
         print "TASKS:"
@@ -167,14 +181,9 @@ class ticktimer:
         return raw_input('Number of hours: ');
 
     def submitEntry(_self, cID, pID, tID, time, notes):
-        global api
-        api.createEntry(tID, time, datetime.date.today(), notes)
+        _self.api.createEntry(tID, time, datetime.date.today(), notes)
 
 
 if __name__ == "__main__":
     tt = ticktimer()
-    cl = tt.selectClient()
-    pr = tt.selectProject(cl)
-    tk = tt.selectTask(pr)
-    tm = tt.getTime()
-    tt.submitEntry(cl, pr, tk, tm, raw_input('Notes: '))
+    gtk.main();
